@@ -1,0 +1,32 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.1",
+    "@tanstack/react-query": "^5.84.1",
+    "better-sqlite3": "^12.2.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.44.4",
+    "drizzle-zod": "^0.8.2",
+    "express": "^5.1.0",
+    "lucide-react": "^0.536.0",
+    "multer": "^2.0.2",
+    "papaparse": "^5.5.3",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hook-form": "^7.62.0",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "wouter": "^3.7.1",
+    "zod": "^4.0.14"
+  }
+}
