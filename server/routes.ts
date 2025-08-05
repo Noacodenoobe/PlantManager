@@ -189,6 +189,104 @@ export function createRoutes(storage: IStorage) {
     }
   });
 
+  // Zone endpoints for frontend compatibility
+  router.get('/zones', async (req, res) => {
+    try {
+      const locations = await storage.getAllLocations();
+      const plants = await storage.getAllPlants();
+      
+      // Get location IDs that have plants assigned
+      const usedLocationIds = new Set(plants.map(plant => plant.locationId).filter(Boolean));
+      
+      // Convert only locations that have plants assigned
+      const filteredLocations = locations.filter(loc => usedLocationIds.has(loc.id) && loc.fullPath);
+      
+      const zones = filteredLocations.map(loc => ({
+        id: loc.id,
+        full_path: loc.fullPath || loc.name,
+        floor: loc.floor,
+        main_zone: loc.mainZone,
+        sub_zone: loc.subZone,
+        area_type: loc.areaType,
+        specific_location: loc.specificLocation
+      }));
+      
+      res.json(zones);
+    } catch (error) {
+      console.error('Error fetching zones:', error);
+      res.status(500).json({ error: 'Błąd podczas pobierania stref' });
+    }
+  });
+
+  router.get('/floors', async (req, res) => {
+    try {
+      const locations = await storage.getAllLocations();
+      
+      // Get unique floors
+      const floors = [...new Set(
+        locations
+          .map(loc => loc.floor)
+          .filter(Boolean) // Remove null/undefined values
+      )].sort();
+      
+      res.json(floors);
+    } catch (error) {
+      console.error('Error fetching floors:', error);
+      res.status(500).json({ error: 'Błąd podczas pobierania pięter' });
+    }
+  });
+
+  router.get('/main-zones', async (req, res) => {
+    try {
+      const { floor } = req.query;
+      const locations = await storage.getAllLocations();
+      
+      let filteredLocations = locations;
+      if (floor) {
+        filteredLocations = locations.filter(loc => loc.floor === floor);
+      }
+      
+      // Get unique main zones
+      const mainZones = [...new Set(
+        filteredLocations
+          .map(loc => loc.mainZone)
+          .filter(Boolean) // Remove null/undefined values
+      )].sort();
+      
+      res.json(mainZones);
+    } catch (error) {
+      console.error('Error fetching main zones:', error);
+      res.status(500).json({ error: 'Błąd podczas pobierania stref głównych' });
+    }
+  });
+
+  router.get('/sub-zones', async (req, res) => {
+    try {
+      const { floor, mainZone } = req.query;
+      const locations = await storage.getAllLocations();
+      
+      let filteredLocations = locations;
+      if (floor) {
+        filteredLocations = filteredLocations.filter(loc => loc.floor === floor);
+      }
+      if (mainZone) {
+        filteredLocations = filteredLocations.filter(loc => loc.mainZone === mainZone);
+      }
+      
+      // Get unique sub zones
+      const subZones = [...new Set(
+        filteredLocations
+          .map(loc => loc.subZone)
+          .filter(Boolean) // Remove null/undefined values
+      )].sort();
+      
+      res.json(subZones);
+    } catch (error) {
+      console.error('Error fetching sub zones:', error);
+      res.status(500).json({ error: 'Błąd podczas pobierania podstref' });
+    }
+  });
+
   // Statistics endpoint
   router.get('/statistics', async (req, res) => {
     try {
