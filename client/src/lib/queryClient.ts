@@ -6,11 +6,11 @@ export const queryClient = new QueryClient({
       queryFn: async ({ queryKey }) => {
         const url = queryKey[0] as string;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         return response.json();
       },
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -29,7 +29,9 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' })) as { error?: string };
+    const errorData = (await response.json().catch(() => ({ error: 'Nieznany błąd' }))) as {
+      error?: string;
+    };
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
 

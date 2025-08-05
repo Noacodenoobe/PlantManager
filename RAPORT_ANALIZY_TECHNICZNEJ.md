@@ -2,7 +2,7 @@
 
 **Data analizy:** 08.01.2025  
 **Analizowana wersja:** v1.0.0  
-**Autor raportu:** AI Assistant  
+**Autor raportu:** AI Assistant
 
 ## 📋 SPIS TREŚCI
 
@@ -23,6 +23,7 @@
 PlantManager MVP to aplikacja do zarządzania roślinami biurowymi z innowacyjnym systemem stref. Projekt ma solidne podstawy techniczne, ale wymaga poprawek w zakresie konsystencji architektury i optymalizacji wydajności.
 
 ### Główne silne strony:
+
 - ✅ Nowoczesny stack technologiczny (React 19, TypeScript, Vite)
 - ✅ Przemyślana struktura hierarchii lokalizacji
 - ✅ Dobra separacja frontend/backend
@@ -30,6 +31,7 @@ PlantManager MVP to aplikacja do zarządzania roślinami biurowymi z innowacyjny
 - ✅ Responsive design z Tailwind CSS
 
 ### Krytyczne problemy:
+
 - 🚨 **Duplikacja logiki serwera** (2 różne implementacje)
 - 🚨 **Niespójność w schematach bazy danych**
 - 🚨 **Problemy z typowaniem TypeScript**
@@ -57,13 +59,13 @@ PlantManager/
 
 ### Ocena architektury
 
-| Komponent | Ocena | Komentarz |
-|-----------|-------|-----------|
-| **Frontend** | 8/10 | Dobrze zorganizowany, nowoczesne narzędzia |
-| **Backend** | 6/10 | Dobra struktura, ale duplikacja kodu |
-| **Baza danych** | 7/10 | Odpowiednia dla MVP, wymaga indeksów |
-| **Współdzielone typy** | 8/10 | Bardzo dobre podejście DRY |
-| **Konfiguracja** | 7/10 | Kompletna, ale wymaga czyszczenia |
+| Komponent              | Ocena | Komentarz                                  |
+| ---------------------- | ----- | ------------------------------------------ |
+| **Frontend**           | 8/10  | Dobrze zorganizowany, nowoczesne narzędzia |
+| **Backend**            | 6/10  | Dobra struktura, ale duplikacja kodu       |
+| **Baza danych**        | 7/10  | Odpowiednia dla MVP, wymaga indeksów       |
+| **Współdzielone typy** | 8/10  | Bardzo dobre podejście DRY                 |
+| **Konfiguracja**       | 7/10  | Kompletna, ale wymaga czyszczenia          |
 
 ---
 
@@ -72,24 +74,26 @@ PlantManager/
 ### Frontend Dependencies
 
 #### Główne zależności (Production):
+
 ```json
 {
-  "react": "^19.1.1",                    // ⚠️ Najnowsza wersja - potencjalne problemy
-  "@tanstack/react-query": "^5.84.1",   // ✅ Aktualna
-  "wouter": "^3.7.1",                   // ✅ Lekki router
-  "tailwindcss": "^3.4.17",             // ✅ Aktualna
-  "drizzle-orm": "^0.44.4",             // ✅ Nowoczesny ORM
-  "better-sqlite3": "^12.2.0",          // ✅ Wydajna baza
-  "zod": "^3.25.1"                      // ✅ Walidacja typów
+  "react": "^19.1.1", // ⚠️ Najnowsza wersja - potencjalne problemy
+  "@tanstack/react-query": "^5.84.1", // ✅ Aktualna
+  "wouter": "^3.7.1", // ✅ Lekki router
+  "tailwindcss": "^3.4.17", // ✅ Aktualna
+  "drizzle-orm": "^0.44.4", // ✅ Nowoczesny ORM
+  "better-sqlite3": "^12.2.0", // ✅ Wydajna baza
+  "zod": "^3.25.1" // ✅ Walidacja typów
 }
 ```
 
 #### Dev Dependencies:
+
 ```json
 {
-  "typescript": "^5.6.3",               // ✅ Aktualna
-  "vite": "^7.0.6",                     // ✅ Najnowsza
-  "@vitejs/plugin-react": "^4.3.4"      // ✅ Aktualna
+  "typescript": "^5.6.3", // ✅ Aktualna
+  "vite": "^7.0.6", // ✅ Najnowsza
+  "@vitejs/plugin-react": "^4.3.4" // ✅ Aktualna
 }
 ```
 
@@ -100,6 +104,7 @@ PlantManager/
 3. **@types/react 18.3.12** vs **React 19.1.1** - niekompatybilne wersje typów
 
 ### Ocena bezpieczeństwa:
+
 - ✅ Wszystkie zależności są aktualne
 - ⚠️ Brak audytu bezpieczeństwa w CI/CD
 - ⚠️ Brak lockfile verification
@@ -111,6 +116,7 @@ PlantManager/
 ### Frontend Code Quality
 
 #### Silne strony:
+
 - ✅ **Komponenty funkcyjne** z hokami
 - ✅ **TypeScript** z typowaniem
 - ✅ **React Query** do zarządzania stanem serwera
@@ -119,16 +125,18 @@ PlantManager/
 #### Wykryte problemy:
 
 1. **PlantsList.tsx** (Line 4):
+
 ```typescript
 const queryClient = new QueryClient(); // ❌ Duplikacja instancji
 ```
 
 2. **Niespójne typowanie** w różnych komponentach:
+
 ```typescript
 // AddPlant.tsx - Line 6
 type Zone = {
   id: number;
-  floor: string;        // ❌ Różni się od schematu
+  floor: string; // ❌ Różni się od schematu
   main_zone: string;
   // ...
 };
@@ -136,7 +144,7 @@ type Zone = {
 // vs shared/schema.ts
 export type Location = {
   id: number;
-  name: string;         // ❌ Inne pole
+  name: string; // ❌ Inne pole
   level: number;
   // ...
 };
@@ -148,6 +156,7 @@ export type Location = {
 ### Backend Code Quality
 
 #### Analiza server/index.ts:
+
 ```typescript
 // ✅ Dobra separacja odpowiedzialności
 const storage = new SQLiteStorage();
@@ -164,6 +173,7 @@ app.use('/api', createRoutes(storage));
 2. **Różne schematy bazy danych**:
 
 **server/storage.ts (Drizzle)**:
+
 ```sql
 CREATE TABLE locations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,6 +184,7 @@ CREATE TABLE locations (
 ```
 
 **start.js (Alternatywny)**:
+
 ```sql
 CREATE TABLE zones (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -188,6 +199,7 @@ CREATE TABLE zones (
 ### Shared Code Quality
 
 #### shared/schema.ts - Bardzo dobre podejście:
+
 ```typescript
 // ✅ Centralne typy
 export type Location = typeof locations.$inferSelect;
@@ -206,31 +218,37 @@ export const createPlantSchema = insertPlantSchema.extend({
 ### 1. KRYTYCZNE PROBLEMY
 
 #### A. Duplikacja serwerów ⚠️⚠️⚠️
+
 **Problem:** 3 różne implementacje serwera z różnymi schematami bazy danych
 
-**Wpływ:** 
+**Wpływ:**
+
 - Niespójność danych
 - Trudności w maintenance
 - Potencjalne błędy synchronizacji
 
 **Lokalizacja:**
+
 - `/server/index.ts` (TypeScript + Drizzle)
 - `/start.js` (ES6 + Raw SQL)
 - `/simple-server.js` (CommonJS + Raw SQL)
 
 #### B. Niespójność schematów bazy danych ⚠️⚠️⚠️
+
 **Problem:** Różne struktury tabel w różnych implementacjach
 
 ```sql
 -- Drizzle Schema (server/storage.ts)
 locations: id, name, level, parent_id
 
--- Alternative Schema (start.js)  
+-- Alternative Schema (start.js)
 zones: id, floor, main_zone, sub_zone, area_type, specific_location, full_path
 ```
 
 #### C. Konflikty typów TypeScript ⚠️⚠️
-**Problem:** 
+
+**Problem:**
+
 ```bash
 @types/react@18.3.12 vs react@19.1.1
 ```
@@ -238,27 +256,32 @@ zones: id, floor, main_zone, sub_zone, area_type, specific_location, full_path
 ### 2. WYSOKIE PROBLEMY
 
 #### A. Brak error handling
+
 - Brak global error boundary w React
 - Minimalne obsługiwanie błędów w API
 
 #### B. Performance issues
+
 - Brak indeksów w bazie danych dla często używanych zapytań
 - Brak paginacji dla listy roślin
 - Duplikacja QueryClient instancji
 
 #### C. Security concerns
+
 - Brak walidacji na poziomie serwera dla niektórych endpointów
 - Brak rate limiting
-- CORS ustawiony na '*'
+- CORS ustawiony na '\*'
 
 ### 3. ŚREDNIE PROBLEMY
 
 #### A. Code quality
+
 - Mieszanie inline styles z Tailwind CSS
 - Brak unit testów
 - Niespójne nazewnictwo (locations vs zones)
 
 #### B. Documentation
+
 - Brak dokumentacji API
 - Brak komentarzy w krytycznych funkcjach
 - README wymaga aktualizacji
@@ -266,6 +289,7 @@ zones: id, floor, main_zone, sub_zone, area_type, specific_location, full_path
 ### 4. NISKIE PROBLEMY
 
 #### A. Developer Experience
+
 - Brak pre-commit hooks
 - Brak ESLint/Prettier configuration
 - Brak hot-reload dla backendu w dev mode
@@ -277,6 +301,7 @@ zones: id, floor, main_zone, sub_zone, area_type, specific_location, full_path
 ### 1. NATYCHMIASTOWE DZIAŁANIA (Wysoki priorytet)
 
 #### A. Konsolidacja serwerów
+
 ```bash
 # Usuń duplikaty
 rm start.js simple-server.js
@@ -285,17 +310,19 @@ rm start.js simple-server.js
 ```
 
 #### B. Naprawienie TypeScript conflicts
+
 ```json
 // package.json - aktualizacja typów
 {
   "devDependencies": {
-    "@types/react": "^19.0.0",        // Zgodność z React 19
+    "@types/react": "^19.0.0", // Zgodność z React 19
     "@types/react-dom": "^19.0.0"
   }
 }
 ```
 
 #### C. Unifikacja schematów bazy danych
+
 ```typescript
 // Nowy unified schema
 export const locations = sqliteTable('locations', {
@@ -303,18 +330,19 @@ export const locations = sqliteTable('locations', {
   name: text('name').notNull(),
   level: integer('level').notNull(),
   parentId: integer('parent_id').references(() => locations.id),
-  fullPath: text('full_path').notNull(),    // Dodane pole
-  floor: text('floor'),                     // Dodane pole  
-  mainZone: text('main_zone'),              // Dodane pole
-  subZone: text('sub_zone'),                // Dodane pole
-  areaType: text('area_type'),              // Dodane pole
-  specificLocation: text('specific_location') // Dodane pole
+  fullPath: text('full_path').notNull(), // Dodane pole
+  floor: text('floor'), // Dodane pole
+  mainZone: text('main_zone'), // Dodane pole
+  subZone: text('sub_zone'), // Dodane pole
+  areaType: text('area_type'), // Dodane pole
+  specificLocation: text('specific_location'), // Dodane pole
 });
 ```
 
 ### 2. KRÓTKOTERMOWE ULEPSZENIA (1-2 tygodnie)
 
 #### A. Dodanie indeksów bazy danych
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_plants_location_id ON plants(location_id);
 CREATE INDEX IF NOT EXISTS idx_plants_status ON plants(status);
@@ -324,6 +352,7 @@ CREATE INDEX IF NOT EXISTS idx_locations_full_path ON locations(full_path);
 ```
 
 #### B. Error Handling
+
 ```typescript
 // App.tsx - dodanie Error Boundary
 import { ErrorBoundary } from 'react-error-boundary';
@@ -344,6 +373,7 @@ function ErrorFallback({error}: {error: Error}) {
 ```
 
 #### C. API Documentation
+
 ```typescript
 // server/routes.ts - dodanie OpenAPI/Swagger docs
 /**
@@ -365,6 +395,7 @@ function ErrorFallback({error}: {error: Error}) {
 ### 3. ŚREDNIOTERMINOWE ULEPSZENIA (1-2 miesiące)
 
 #### A. Testing Framework
+
 ```json
 // package.json
 {
@@ -381,6 +412,7 @@ function ErrorFallback({error}: {error: Error}) {
 ```
 
 #### B. Performance optimizations
+
 ```typescript
 // Dodanie React.memo dla komponentów
 const PlantCard = React.memo(({ plant }: { plant: Plant }) => {
@@ -392,6 +424,7 @@ import { FixedSizeList as List } from 'react-window';
 ```
 
 #### C. State Management
+
 ```typescript
 // Zastąpienie useState przez Zustand dla complex state
 import { create } from 'zustand';
@@ -403,22 +436,24 @@ interface PlantsState {
   setFilters: (filters: FilterState) => void;
 }
 
-const usePlantsStore = create<PlantsState>((set) => ({
+const usePlantsStore = create<PlantsState>(set => ({
   plants: [],
   filters: {},
-  setPlants: (plants) => set({ plants }),
-  setFilters: (filters) => set({ filters }),
+  setPlants: plants => set({ plants }),
+  setFilters: filters => set({ filters }),
 }));
 ```
 
 ### 4. DŁUGOTERMINOWE ULEPSZENIA (3+ miesięcy)
 
 #### A. Migracja na PostgreSQL
+
 - Lepsze wsparcie dla concurrent access
 - Advanced indexing capabilities
 - JSON support for complex queries
 
 #### B. Authentication & Authorization
+
 ```typescript
 // Dodanie systemu uwierzytelniania
 interface User {
@@ -430,6 +465,7 @@ interface User {
 ```
 
 #### C. Real-time features
+
 ```typescript
 // WebSocket integration dla real-time updates
 import { io } from 'socket.io-client';
@@ -443,6 +479,7 @@ socket.on('plant-updated', (plant: Plant) => {
 ### 5. INFRASTRUKTURA I DEVOPS
 
 #### A. CI/CD Pipeline
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI/CD
@@ -462,6 +499,7 @@ jobs:
 ```
 
 #### B. Docker containerization
+
 ```dockerfile
 # Dockerfile
 FROM node:18-alpine
@@ -475,13 +513,14 @@ CMD ["npm", "start"]
 ```
 
 #### C. Environment configuration
+
 ```typescript
 // config/env.ts
 export const config = {
   port: process.env.PORT || 3000,
   dbPath: process.env.DB_PATH || 'database.db',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  logLevel: process.env.LOG_LEVEL || 'info'
+  logLevel: process.env.LOG_LEVEL || 'info',
 };
 ```
 
@@ -490,20 +529,24 @@ export const config = {
 ## 🎯 PRIORYTETOWE DZIAŁANIA
 
 ### Tydzień 1: Krytyczne naprawy
+
 1. **[DZIEŃ 1-2]** Usuń duplikaty serwerów (`start.js`, `simple-server.js`)
 2. **[DZIEŃ 3-4]** Napraw konflikty TypeScript (@types/react vs react)
 3. **[DZIEŃ 5-7]** Zunifikuj schemat bazy danych
 
 ### Tydzień 2: Stabilizacja
+
 1. **[DZIEŃ 1-3]** Dodaj indeksy do bazy danych
 2. **[DZIEŃ 4-5]** Implementuj proper error handling
 3. **[DZIEŃ 6-7]** Dodaj podstawowe testy
 
 ### Miesiąc 1: Ulepszenia
+
 1. **[TYDZIEŃ 3]** Dokumentacja API (OpenAPI/Swagger)
 2. **[TYDZIEŃ 4]** Performance optimizations (memo, virtualization)
 
 ### Miesiąc 2-3: Rozszerzenia
+
 1. **Authentication system**
 2. **Advanced filtering & search**
 3. **Export/Import improvements**
@@ -515,21 +558,21 @@ export const config = {
 
 ### Aktualne metryki jakości kodu:
 
-| Metryka | Wartość | Cel |
-|---------|---------|-----|
-| **TypeScript coverage** | ~70% | 95% |
-| **Test coverage** | 0% | 80% |
-| **Build time** | ~15s | <10s |
-| **Bundle size** | ~500KB | <300KB |
-| **Performance score** | ~75 | >90 |
+| Metryka                 | Wartość | Cel    |
+| ----------------------- | ------- | ------ |
+| **TypeScript coverage** | ~70%    | 95%    |
+| **Test coverage**       | 0%      | 80%    |
+| **Build time**          | ~15s    | <10s   |
+| **Bundle size**         | ~500KB  | <300KB |
+| **Performance score**   | ~75     | >90    |
 
 ### Metryki biznesowe:
 
-| Metryka | Wartość |
-|---------|---------|
-| **Czas ładowania strony** | ~2s |
-| **Czas importu CSV (100 rekordów)** | ~3s |
-| **Średni czas odpowiedzi API** | ~200ms |
+| Metryka                             | Wartość |
+| ----------------------------------- | ------- |
+| **Czas ładowania strony**           | ~2s     |
+| **Czas importu CSV (100 rekordów)** | ~3s     |
+| **Średni czas odpowiedzi API**      | ~200ms  |
 
 ---
 
@@ -538,11 +581,12 @@ export const config = {
 ### 1. Architektura aplikacji
 
 #### A. Restructurization
+
 ```
 PlantManager/
 ├── apps/
 │   ├── web/              # Frontend React app
-│   └── api/              # Backend Express app  
+│   └── api/              # Backend Express app
 ├── packages/
 │   ├── database/         # Database schemas & migrations
 │   ├── shared/           # Shared types & utilities
@@ -554,6 +598,7 @@ PlantManager/
 ```
 
 #### B. Monorepo z Turborepo
+
 ```json
 // turbo.json
 {
@@ -573,6 +618,7 @@ PlantManager/
 ### 2. Database schema improvements
 
 #### A. Migrations system
+
 ```typescript
 // packages/database/migrations/001_initial.sql
 CREATE TABLE locations (
@@ -588,6 +634,7 @@ CREATE TABLE locations (
 ```
 
 #### B. Advanced indexing strategy
+
 ```sql
 -- Composite indexes for common queries
 CREATE INDEX idx_plants_status_location ON plants(status, location_id);
@@ -603,6 +650,7 @@ CREATE VIRTUAL TABLE plants_fts USING fts5(
 ### 3. API Design improvements
 
 #### A. RESTful API structure
+
 ```typescript
 // Consistent resource naming
 GET    /api/v1/plants
@@ -617,6 +665,7 @@ GET    /api/v1/locations/:id/plants
 ```
 
 #### B. Response standardization
+
 ```typescript
 interface ApiResponse<T> {
   success: boolean;
@@ -638,6 +687,7 @@ interface ApiResponse<T> {
 ### 4. Frontend architecture improvements
 
 #### A. Feature-based structure
+
 ```
 apps/web/src/
 ├── features/
@@ -658,6 +708,7 @@ apps/web/src/
 ```
 
 #### B. Advanced state management
+
 ```typescript
 // Feature-specific stores
 export const usePlantsStore = create<PlantsState>()(
@@ -681,16 +732,18 @@ export const usePlantsStore = create<PlantsState>()(
 ### 1. Frontend optimizations
 
 #### A. Code splitting
+
 ```typescript
 // Route-based code splitting
 const PlantsList = lazy(() => import('../pages/PlantsList'));
 const AddPlant = lazy(() => import('../pages/AddPlant'));
 
-// Component-based code splitting  
+// Component-based code splitting
 const HeavyComponent = lazy(() => import('./HeavyComponent'));
 ```
 
 #### B. Query optimizations
+
 ```typescript
 // React Query optimizations
 const usePlantsQuery = (filters: FilterState) => {
@@ -707,6 +760,7 @@ const usePlantsQuery = (filters: FilterState) => {
 ### 2. Backend optimizations
 
 #### A. Database query optimization
+
 ```typescript
 // Efficient JOIN queries
 const getPlantsWithLocations = () => {
@@ -732,6 +786,7 @@ const getPlantsWithLocations = () => {
 ```
 
 #### B. Caching strategy
+
 ```typescript
 // Redis cache layer
 import Redis from 'ioredis';
@@ -741,14 +796,14 @@ const redis = new Redis(process.env.REDIS_URL);
 const getCachedPlants = async (filters: string) => {
   const cacheKey = `plants:${filters}`;
   const cached = await redis.get(cacheKey);
-  
+
   if (cached) {
     return JSON.parse(cached);
   }
-  
+
   const plants = await fetchPlantsFromDB(filters);
   await redis.setex(cacheKey, 300, JSON.stringify(plants)); // 5 min cache
-  
+
   return plants;
 };
 ```
@@ -771,23 +826,23 @@ interface JWTPayload {
 const requireAuth = (requiredPermissions: Permission[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
-      
+
       // Check permissions
       const hasPermission = requiredPermissions.every(permission =>
         payload.permissions.includes(permission)
       );
-      
+
       if (!hasPermission) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
-      
+
       req.user = payload;
       next();
     } catch (error) {
@@ -802,11 +857,13 @@ const requireAuth = (requiredPermissions: Permission[]) => {
 ```typescript
 // Comprehensive validation schemas
 const createPlantSchema = z.object({
-  id: z.string()
+  id: z
+    .string()
     .min(1, 'ID is required')
     .max(50, 'ID too long')
     .regex(/^[A-Z0-9_]+$/, 'Invalid ID format'),
-  species: z.string()
+  species: z
+    .string()
     .min(1, 'Species is required')
     .max(200, 'Species name too long')
     .transform(val => val.trim()),
@@ -832,7 +889,7 @@ const limiter = rateLimit({
 const corsOptions = {
   origin: (origin: string | undefined, callback: Function) => {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
-    
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -851,12 +908,14 @@ const corsOptions = {
 ### Ocena ogólna: **7/10** - Dobra aplikacja z potencjałem
 
 ### Mocne strony do zachowania:
+
 1. ✅ **Nowoczesny stack technologiczny**
-2. ✅ **Przemyślana hierarchia lokalizacji**  
+2. ✅ **Przemyślana hierarchia lokalizacji**
 3. ✅ **Dobra separacja concerns**
 4. ✅ **Użycie TypeScript i Zod**
 
 ### Krytyczne obszary wymagające natychmiastowej uwagi:
+
 1. 🚨 **Konsolidacja duplikowanych serwerów**
 2. 🚨 **Naprawienie konfliktów TypeScript**
 3. 🚨 **Zunifikowanie schematów bazy danych**
@@ -864,21 +923,23 @@ const corsOptions = {
 
 ### Rekomendowany harmonogram implementacji:
 
-| Tydzień | Priorytet | Zadania |
-|---------|-----------|---------|
-| **1** | 🔴 Krytyczny | Usunięcie duplikatów, naprawienie TypeScript |
-| **2** | 🟠 Wysoki | Indeksy DB, error handling, podstawowe testy |
-| **3-4** | 🟡 Średni | Dokumentacja API, performance optimizations |
-| **5-8** | 🟢 Niski | Advanced features, monitoring, deployment |
+| Tydzień | Priorytet    | Zadania                                      |
+| ------- | ------------ | -------------------------------------------- |
+| **1**   | 🔴 Krytyczny | Usunięcie duplikatów, naprawienie TypeScript |
+| **2**   | 🟠 Wysoki    | Indeksy DB, error handling, podstawowe testy |
+| **3-4** | 🟡 Średni    | Dokumentacja API, performance optimizations  |
+| **5-8** | 🟢 Niski     | Advanced features, monitoring, deployment    |
 
 ### Długoterminowa wizja rozwoju:
+
 - **Miesiąc 1-2:** Stabilizacja i optymalizacja
 - **Miesiąc 3-6:** Rozszerzenia funkcjonalne (auth, advanced search)
 - **Miesiąc 6+:** Skalowanie i enterprise features
 
 ### ROI przewidywanych ulepszeń:
+
 - **Krótkoterminowe (1-2 tyg.):** ⬆️ +40% stabilności, -60% bugów
-- **Średnioterminowe (1-2 mies.):** ⬆️ +50% wydajności, +80% maintainability  
+- **Średnioterminowe (1-2 mies.):** ⬆️ +50% wydajności, +80% maintainability
 - **Długoterminowe (3+ mies.):** ⬆️ +100% skalowalności, możliwość enterprise deployment
 
 ---
@@ -887,4 +948,4 @@ const corsOptions = {
 
 ---
 
-*Raport wygenerowany automatycznie na podstawie analizy kodu źródłowego, zależności i architektury aplikacji PlantManager MVP. Dla pytań technicznych skontaktuj się z zespołem developerskim.*
+_Raport wygenerowany automatycznie na podstawie analizy kodu źródłowego, zależności i architektury aplikacji PlantManager MVP. Dla pytań technicznych skontaktuj się z zespołem developerskim._

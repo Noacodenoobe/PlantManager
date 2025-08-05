@@ -21,8 +21,6 @@
       "@assets/*": ["./client/assets/*"]
     }
   },
-  "include": [
-    "client/src"
-  ],
+  "include": ["client/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
