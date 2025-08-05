@@ -1,0 +1,75 @@
+Szczegółowa analiza techniczna błędu ERESOLVE w npm
+
+Kontekst zależności i peerDependencies
+
+Twoja aplikacja deklaruje w package.json zależność
+
+"dependencies": {
+  "zod": "^4.0.14",
+  "drizzle-zod": "^0.8.2"
+}
+
+Pakiet drizzle-zod@0.8.2 definiuje Zod jako peer dependency w wersji "^3.25.1".
+
+Co to jest peerDependency
+
+peerDependency to informacja dla konsumenta pakietu, że dana biblioteka (moduł A) wymaga, by główny projekt (moduł B) dostarczył określoną wersję innej biblioteki (moduł C).
+
+peerDependencies nie są instalowane automatycznie w poddrzewie modułu A, lecz muszą istnieć jako zależność w drzewie modułu B.
+
+npm od wersji 7+, jeśli natrafi na niekompatybilne peerDependencies, przerywa instalację z błędem ERESOLVE.
+
+Jak npm buduje drzewo zależności i dlaczego pojawia się konflikt
+
+npm czyta wszystkie zależności w package.json i próbuje wstawić pasujące wersje do drzewa node_modules.
+
+Root projektu wymusza zod@^4.0.14 → instaluje Zod 4.x w node_modules/zod.
+
+drizzle-zod@0.8.2 zgłasza peer dependency zod@^3.25.1. Zod 3.x nie pasuje do już zainstalowanej 4.x.
+
+npm nie może wygenerować jednego drzewa, które zaspokaja oba zakresy wersji dla zod.
+
+W efekcie npm zwraca błąd ERESOLVE i zatrzymuje proces instalacji.
+
+Szczegóły semantycznego wersjonowania (SemVer)
+
+Zakres ^3.25.1 oznacza wszystkie wersje ≥3.25.1 i <4.0.0.
+
+Zakres ^4.0.14 oznacza wszystkie wersje ≥4.0.14 i <5.0.0.
+
+Brak przecięcia między <4.0.0 a >=4.0.14 sprawia, że nie da się zainstalować jednej wersji Zod, która spełnia oba zakresy.
+
+Przykład uproszczonego drzewa zależności
+
+projekt/
+└─ node_modules/
+   ├─ zod@4.0.14         ← główny projekt
+   └─ drizzle-zod@0.8.2  → oczekuje peer zod@^3.25.1
+
+npm nie pozwala na dwie różne wersje tego samego pakietu w ramach tego samego poziomu bez użycia workspaces lub specjalnych przełączników.
+
+Mechanizm ERESOLVE w npm 7+
+
+Domyślnie npm 7+ zwraca błąd przy napotkaniu wolnych peerDependencies.
+
+Flaga --legacy-peer-deps wyłącza tę weryfikację, przywracając zachowanie z npm 6 (ignorowanie peer conflicts).
+
+Flaga --force wymusza instalację pomimo konfliktu, ale może prowadzić do runtime’owych błędów typu brak funkcji lub zmieniona sygnatura API.
+
+Główne elementy do wyjaśnienia dla wykonawcy
+
+peerDependencies służą do zapewnienia spójności wersji bibliotek wykorzystywanych przez wiele pakietów.
+
+npm łamie instalację, gdy nie może zagwarantować, że biblioteki będą działały z oczekiwanymi wersjami.
+
+Konflikt wynika z nieprzecinających się zakresów SemVer.
+
+Co warto uznać za następne kroki
+
+Skorygowanie wersji w package.json, aby oba pakiety miały wspólny zakres dla Zod.
+
+Rozważenie użycia pola overrides (npm) lub resolutions (Yarn) do wymuszenia jednej wersji Zod.
+
+Monitorowanie wydań drizzle-zod, by przenieść się w przyszłości na nowsze peerDependencies.
+
+Powyższe informacje opisują mechanikę konfliktu na poziomie drzew zależności i kierują, gdzie należy dokonać zmian w konfiguracji.

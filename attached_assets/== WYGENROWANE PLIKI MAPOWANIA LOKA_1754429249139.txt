@@ -1,0 +1,13 @@
+== WYGENROWANE PLIKI MAPOWANIA LOKALIZACJI ===
+1. complete_location_mapping.json - Pełne mapowanie hierarchiczne
+2. database_location_mapping.csv - Struktura dla bazy danych
+3. location_tree.json - Drzewo lokalizacji w formacie JSON
+4. location_statistics.json - Statystyki lokalizacji
+
+=== STATYSTYKI ===
+Liczba pięter: 5
+Liczba stref głównych: 56
+Liczba lokalizacji szczegółowych: 39
+Liczba rodzajów donic: 50
+Liczba lokalizacji precyzyjnych: 30
+PS C:\Users\zarod\Desktop\projektyai\analiza> 
