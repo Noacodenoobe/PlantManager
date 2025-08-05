@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, QueryClient } from '@tanstack/react-query';
 
-const queryClient = new (require('@tanstack/react-query').QueryClient)();
+const queryClient = new QueryClient();
 
 export default function ImportCSV() {
-  const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
     message: string;
@@ -25,13 +25,13 @@ export default function ImportCSV() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' }));
+        const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' })) as { error?: string };
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setImportResult({
         success: true,
         message: data.message,
@@ -64,14 +64,14 @@ export default function ImportCSV() {
     e.stopPropagation();
     setDragActive(false);
     
-    const files = e.dataTransfer.files;
+    const files = (e.dataTransfer as DataTransfer).files;
     if (files && files[0]) {
       handleFile(files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    const files = (e.target as HTMLInputElement).files;
     if (files && files[0]) {
       handleFile(files[0]);
     }
@@ -79,7 +79,7 @@ export default function ImportCSV() {
 
   const handleFile = (file: File) => {
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      alert('Proszę wybrać plik CSV');
+      window.alert('Proszę wybrać plik CSV');
       return;
     }
     
@@ -94,7 +94,7 @@ export default function ImportCSV() {
   };
 
   const handleClick = () => {
-    fileInputRef.current?.click();
+    (fileInputRef.current as HTMLInputElement)?.click();
   };
 
   return (
@@ -119,13 +119,20 @@ export default function ImportCSV() {
         </div>
 
         <div
-          className={`drop-zone ${dragActive ? 'active' : ''}`}
+          style={{
+            border: '2px dashed #d1d5db',
+            borderRadius: '8px',
+            padding: '32px',
+            textAlign: 'center',
+            backgroundColor: dragActive ? '#f3f4f6' : '#ffffff',
+            borderColor: dragActive ? '#3b82f6' : '#d1d5db',
+            transition: 'all 0.2s ease',
+            marginBottom: '24px',
+          }}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={handleClick}
-          style={{ marginBottom: '24px' }}
         >
           <input
             ref={fileInputRef}
@@ -135,76 +142,79 @@ export default function ImportCSV() {
             style={{ display: 'none' }}
           />
           
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '48px', height: '48px', backgroundColor: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
-              📄
-            </div>
-            
-            {selectedFile ? (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{selectedFile.name}</p>
-                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                  Rozmiar: {(selectedFile.size / 1024).toFixed(1)} KB
-                </p>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>Przeciągnij i upuść plik CSV tutaj</p>
-                <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
-                  lub kliknij, aby wybrać plik
-                </p>
-              </div>
-            )}
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+            📁
           </div>
+          
+          <h3 style={{ marginBottom: '8px' }}>
+            {selectedFile ? selectedFile.name : 'Przeciągnij plik CSV lub kliknij, aby wybrać'}
+          </h3>
+          
+          <p style={{ color: '#6b7280', marginBottom: '16px' }}>
+            {selectedFile 
+              ? `Wybrany plik: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`
+              : 'Obsługiwane formaty: CSV'
+            }
+          </p>
+          
+          <button
+            onClick={handleClick}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            Wybierz plik
+          </button>
         </div>
 
         {selectedFile && (
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ marginBottom: '24px' }}>
             <button
               onClick={handleImport}
               disabled={importMutation.isPending}
-              className="btn btn-primary"
-              style={{ flex: 1 }}
+              style={{
+                backgroundColor: '#10b981',
+                color: 'white',
+                padding: '12px 24px',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                width: '100%',
+              }}
             >
               {importMutation.isPending ? 'Importowanie...' : 'Importuj dane'}
-            </button>
-            
-            <button
-              onClick={() => {
-                setSelectedFile(null);
-                setImportResult(null);
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = '';
-                }
-              }}
-              disabled={importMutation.isPending}
-              className="btn btn-secondary"
-            >
-              Anuluj
             </button>
           </div>
         )}
 
         {importResult && (
-          <div className={`alert ${importResult.success ? 'alert-success' : 'alert-error'}`}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>
-                {importResult.success ? '✅' : '❌'}
-              </span>
-              <div>
-                <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>
-                  {importResult.success ? 'Import zakończony sukcesem!' : 'Błąd importu'}
-                </p>
-                <p style={{ fontSize: '14px', margin: 0 }}>
-                  {importResult.message}
-                </p>
-                {importResult.importedRecords && (
-                  <p style={{ fontSize: '14px', margin: '4px 0 0 0' }}>
-                    Zaimportowano rekordów: {importResult.importedRecords}
-                  </p>
-                )}
-              </div>
-            </div>
+          <div
+            style={{
+              padding: '16px',
+              borderRadius: '8px',
+              backgroundColor: importResult.success ? '#d1fae5' : '#fee2e2',
+              border: `1px solid ${importResult.success ? '#10b981' : '#ef4444'}`,
+              color: importResult.success ? '#065f46' : '#991b1b',
+            }}
+          >
+            <h4 style={{ margin: '0 0 8px 0' }}>
+              {importResult.success ? '✅ Import zakończony pomyślnie' : '❌ Błąd importu'}
+            </h4>
+            <p style={{ margin: 0 }}>
+              {importResult.message}
+              {importResult.importedRecords && (
+                <span style={{ display: 'block', marginTop: '8px', fontWeight: 'bold' }}>
+                  Zaimportowano {importResult.importedRecords} rekordów
+                </span>
+              )}
+            </p>
           </div>
         )}
       </div>

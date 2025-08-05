@@ -29,7 +29,7 @@ export const apiRequest = async (url: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' }));
+    const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' })) as { error?: string };
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
 

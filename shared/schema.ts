@@ -63,8 +63,12 @@ export const createPlantSchema = insertPlantSchema.extend({
   status: z.enum(['Zdrowa', 'Do obserwacji', 'W trakcie leczenia', 'Do usunięcia']),
 });
 
-export const updatePlantSchema = createPlantSchema.partial().extend({
+export const updatePlantSchema = z.object({
   id: z.string().min(1),
+  species: z.string().optional(),
+  locationId: z.number().optional(),
+  status: z.enum(['Zdrowa', 'Do obserwacji', 'W trakcie leczenia', 'Do usunięcia']).optional(),
+  notes: z.string().optional(),
 });
 
 // Typy TypeScript

@@ -1,8 +1,12 @@
-const express = require('express');
-const Database = require('better-sqlite3');
-const multer = require('multer');
-const Papa = require('papaparse');
-const path = require('path');
+import express from 'express';
+import Database from 'better-sqlite3';
+import multer from 'multer';
+import Papa from 'papaparse';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -10,14 +14,16 @@ const port = process.env.PORT || 3000;
 // Initialize SQLite database
 const db = new Database('database.db');
 
-// Create tables
+// Create tables with new structure
 db.exec(`
-  CREATE TABLE IF NOT EXISTS locations (
+  CREATE TABLE IF NOT EXISTS zones (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    level INTEGER NOT NULL,
-    parent_id INTEGER,
-    FOREIGN KEY (parent_id) REFERENCES locations(id) ON DELETE CASCADE
+    floor TEXT NOT NULL,
+    main_zone TEXT NOT NULL,
+    sub_zone TEXT,
+    area_type TEXT,
+    specific_location TEXT,
+    full_path TEXT NOT NULL UNIQUE
   );
 `);
 
@@ -25,18 +31,10 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS plants (
     id TEXT PRIMARY KEY,
     species TEXT NOT NULL,
-    location_id INTEGER,
+    zone_id INTEGER,
     status TEXT NOT NULL DEFAULT 'Zdrowa',
     notes TEXT,
-    FOREIGN KEY (location_id) REFERENCES locations(id)
-  );
-`);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL
+    FOREIGN KEY (zone_id) REFERENCES zones(id) ON DELETE SET NULL
   );
 `);
 
@@ -46,14 +44,42 @@ app.use(express.static('dist'));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Helper function to create or get zone
+const getOrCreateZone = (floor, mainZone, subZone, areaType, specificLocation) => {
+  const fullPath = [floor, mainZone, subZone, areaType, specificLocation]
+    .filter(Boolean)
+    .join(' > ');
+  
+  let zone = db.prepare('SELECT * FROM zones WHERE full_path = ?').get(fullPath);
+  
+  if (!zone) {
+    const stmt = db.prepare(`
+      INSERT INTO zones (floor, main_zone, sub_zone, area_type, specific_location, full_path)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(floor, mainZone, subZone, areaType, specificLocation, fullPath);
+    zone = {
+      id: result.lastInsertRowid,
+      floor,
+      main_zone: mainZone,
+      sub_zone: subZone,
+      area_type: areaType,
+      specific_location: specificLocation,
+      full_path: fullPath
+    };
+  }
+  
+  return zone;
+};
+
 // API Routes
 app.get('/api/plants', (req, res) => {
   try {
-    const { search, status, locationId } = req.query;
+    const { search, status, zoneId, floor, mainZone, subZone } = req.query;
     let query = `
-      SELECT p.*, l.name as location_name 
+      SELECT p.*, z.full_path as zone_path
       FROM plants p 
-      LEFT JOIN locations l ON p.location_id = l.id
+      LEFT JOIN zones z ON p.zone_id = z.id
     `;
     
     const conditions = [];
@@ -69,9 +95,25 @@ app.get('/api/plants', (req, res) => {
       params.push(status);
     }
     
-    if (locationId) {
-      conditions.push('p.location_id = ?');
-      params.push(locationId);
+    if (zoneId) {
+      conditions.push('p.zone_id = ?');
+      params.push(zoneId);
+    }
+    
+    // Hierarchical filtering
+    if (floor) {
+      conditions.push('z.floor = ?');
+      params.push(floor);
+    }
+    
+    if (mainZone) {
+      conditions.push('z.main_zone = ?');
+      params.push(mainZone);
+    }
+    
+    if (subZone) {
+      conditions.push('z.sub_zone = ?');
+      params.push(subZone);
     }
     
     if (conditions.length > 0) {
@@ -84,13 +126,12 @@ app.get('/api/plants', (req, res) => {
     const result = plants.map(plant => ({
       id: plant.id,
       species: plant.species,
-      locationId: plant.location_id,
+      zoneId: plant.zone_id,
       status: plant.status,
       notes: plant.notes,
-      location: plant.location_name ? {
-        id: plant.location_id,
-        name: plant.location_name,
-        fullPath: plant.location_name
+      zone: plant.zone_id ? {
+        id: plant.zone_id,
+        fullPath: plant.zone_path
       } : undefined
     }));
     
@@ -101,75 +142,150 @@ app.get('/api/plants', (req, res) => {
   }
 });
 
-app.get('/api/locations', (req, res) => {
+app.get('/api/zones', (req, res) => {
   try {
-    const { level, parentId } = req.query;
-    let query = 'SELECT * FROM locations';
+    const { floor, mainZone, subZone } = req.query;
+    let query = 'SELECT * FROM zones';
     const params = [];
     
-    if (level) {
-      query += ' WHERE level = ?';
-      params.push(level);
-    } else if (parentId !== undefined) {
-      if (parentId === 'null') {
-        query += ' WHERE parent_id IS NULL';
-      } else {
-        query += ' WHERE parent_id = ?';
-        params.push(parentId);
-      }
+    if (floor) {
+      query += ' WHERE floor = ?';
+      params.push(floor);
+    } else if (mainZone) {
+      query += ' WHERE main_zone = ?';
+      params.push(mainZone);
+    } else if (subZone) {
+      query += ' WHERE sub_zone = ?';
+      params.push(subZone);
     }
     
     const stmt = db.prepare(query);
-    const locations = stmt.all(...params);
-    res.json(locations);
+    const zones = stmt.all(...params);
+    
+    res.json(zones);
   } catch (error) {
-    console.error('Error fetching locations:', error);
-    res.status(500).json({ error: 'Błąd podczas pobierania lokalizacji' });
+    console.error('Error fetching zones:', error);
+    res.status(500).json({ error: 'Błąd podczas pobierania stref' });
+  }
+});
+
+// New endpoints for hierarchical filtering
+app.get('/api/floors', (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT DISTINCT floor FROM zones ORDER BY floor');
+    const floors = stmt.all();
+    res.json(floors.map(f => f.floor));
+  } catch (error) {
+    console.error('Error fetching floors:', error);
+    res.status(500).json({ error: 'Błąd podczas pobierania pięter' });
+  }
+});
+
+app.get('/api/main-zones', (req, res) => {
+  try {
+    const { floor } = req.query;
+    let query = 'SELECT DISTINCT main_zone FROM zones';
+    const params = [];
+    
+    if (floor) {
+      query += ' WHERE floor = ?';
+      params.push(floor);
+    }
+    
+    query += ' ORDER BY main_zone';
+    const stmt = db.prepare(query);
+    const mainZones = stmt.all(...params);
+    res.json(mainZones.map(z => z.main_zone));
+  } catch (error) {
+    console.error('Error fetching main zones:', error);
+    res.status(500).json({ error: 'Błąd podczas pobierania stref głównych' });
+  }
+});
+
+app.get('/api/sub-zones', (req, res) => {
+  try {
+    const { floor, mainZone } = req.query;
+    let query = 'SELECT DISTINCT sub_zone FROM zones';
+    const params = [];
+    
+    if (floor && mainZone) {
+      query += ' WHERE floor = ? AND main_zone = ?';
+      params.push(floor, mainZone);
+    } else if (floor) {
+      query += ' WHERE floor = ?';
+      params.push(floor);
+    } else if (mainZone) {
+      query += ' WHERE main_zone = ?';
+      params.push(mainZone);
+    }
+    
+    query += ' ORDER BY sub_zone';
+    const stmt = db.prepare(query);
+    const subZones = stmt.all(...params);
+    res.json(subZones.map(z => z.sub_zone));
+  } catch (error) {
+    console.error('Error fetching sub zones:', error);
+    res.status(500).json({ error: 'Błąd podczas pobierania podstref' });
   }
 });
 
 app.post('/api/plants', (req, res) => {
   try {
-    const { id, species, locationId, status, notes } = req.body;
+    const { id, species, zoneId, status, notes } = req.body;
     
     if (!id || !species) {
       return res.status(400).json({ error: 'ID i gatunek są wymagane' });
     }
     
     const stmt = db.prepare(`
-      INSERT INTO plants (id, species, location_id, status, notes)
+      INSERT INTO plants (id, species, zone_id, status, notes)
       VALUES (?, ?, ?, ?, ?)
     `);
     
-    stmt.run(id, species, locationId || null, status || 'Zdrowa', notes || null);
+    stmt.run(id, species, zoneId || null, status || 'Zdrowa', notes || null);
     
-    res.status(201).json({ id, species, locationId, status, notes });
+    res.status(201).json({ id, species, zoneId, status, notes });
   } catch (error) {
     console.error('Error creating plant:', error);
     res.status(500).json({ error: 'Błąd podczas tworzenia rośliny' });
   }
 });
 
-app.patch('/api/plants/*', (req, res) => {
+app.patch('/api/plants/:id', (req, res) => {
   try {
-    const id = req.url.split('/').pop();
-    const updates = req.body;
+    const id = req.params.id;
+    const { species, zoneId, status, notes } = req.body;
     
-    const fields = [];
+    const updates = [];
     const values = [];
     
-    Object.entries(updates).forEach(([key, value]) => {
-      if (key === 'locationId') {
-        fields.push('location_id = ?');
-      } else {
-        fields.push(`${key} = ?`);
-      }
-      values.push(value);
-    });
+    if (species !== undefined) {
+      updates.push('species = ?');
+      values.push(species);
+    }
+    
+    if (zoneId !== undefined) {
+      updates.push('zone_id = ?');
+      values.push(zoneId);
+    }
+    
+    if (status !== undefined) {
+      updates.push('status = ?');
+      values.push(status);
+    }
+    
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      values.push(notes);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'Brak danych do aktualizacji' });
+    }
     
     values.push(id);
     
-    const stmt = db.prepare(`UPDATE plants SET ${fields.join(', ')} WHERE id = ?`);
+    const stmt = db.prepare(`UPDATE plants SET ${updates.join(', ')} WHERE id = ?`);
     const result = stmt.run(...values);
     
     if (result.changes === 0) {
@@ -184,9 +300,9 @@ app.patch('/api/plants/*', (req, res) => {
   }
 });
 
-app.delete('/api/plants/*', (req, res) => {
+app.delete('/api/plants/:id', (req, res) => {
   try {
-    const id = req.url.split('/').pop();
+    const id = req.params.id;
     const stmt = db.prepare('DELETE FROM plants WHERE id = ?');
     const result = stmt.run(id);
     
@@ -220,77 +336,59 @@ app.post('/api/import-csv', upload.single('csvFile'), (req, res) => {
       });
     }
 
-    // Import logic (simplified)
+    let importedCount = 0;
+    const errors = [];
+
     const transaction = db.transaction(() => {
-      const locationCache = new Map();
-      
-      parseResult.data.forEach(row => {
-        // Create locations hierarchy
-        const locationLevels = [
-          { name: row.Pietro || row['Piętro'], level: 1 },
-          { name: row.Strefa_glowna || row['Strefa główna'], level: 2 },
-          { name: row.Lokalizacja_szczegolowa || row['Lokalizacja szczegółowa'], level: 3 },
-          { name: row.Rodzaj_donicy || row['Rodzaj donicy'], level: 4 },
-          { name: row.Lokalizacja_precyzyjna || row['Lokalizacja precyzyjna'], level: 5 }
-        ].filter(loc => loc.name && loc.name.trim() !== '');
-
-        let parentId = null;
-        let currentLocationId = null;
-
-        locationLevels.forEach((levelData, index) => {
-          const pathKey = locationLevels.slice(0, index + 1).map(l => l.name).join(' > ');
+      parseResult.data.forEach((row, index) => {
+        try {
+          // Extract zone information from CSV
+          const floor = row.Pietro || row['Piętro'] || '';
+          const mainZone = row.Strefa_glowna || row['Strefa główna'] || '';
+          const subZone = row.Lokalizacja_szczegolowa || row['Lokalizacja szczegółowa'] || '';
+          const areaType = row.Rodzaj_donicy || row['Rodzaj donicy'] || '';
+          const specificLocation = row.Lokalizacja_precyzyjna || row['Lokalizacja precyzyjna'] || '';
           
-          if (!locationCache.has(pathKey)) {
-            const stmt = db.prepare(`
-              INSERT INTO locations (name, level, parent_id)
-              VALUES (?, ?, ?)
-            `);
-            const result = stmt.run(levelData.name, levelData.level, parentId);
-            locationCache.set(pathKey, result.lastInsertRowid);
-            currentLocationId = result.lastInsertRowid;
-          } else {
-            currentLocationId = locationCache.get(pathKey);
-          }
+          // Create or get zone
+          const zone = getOrCreateZone(floor, mainZone, subZone, areaType, specificLocation);
           
-          parentId = currentLocationId;
-        });
-
-        // Add plant
-        const plantId = row.ID_Rosliny || row['ID Rośliny'] || row['ID_Rośliny'];
-        const species = row.Roslina || row['Roślina'];
-        
-        if (plantId && species) {
-          try {
+          // Add plant
+          const plantId = row.ID_Rosliny || row['ID Rośliny'] || row['ID_Rośliny'];
+          const species = row.Roslina || row['Roślina'];
+          
+          if (plantId && species) {
             const stmt = db.prepare(`
-              INSERT OR REPLACE INTO plants (id, species, location_id, status, notes)
+              INSERT OR REPLACE INTO plants (id, species, zone_id, status, notes)
               VALUES (?, ?, ?, ?, ?)
             `);
-            stmt.run(plantId, species, currentLocationId, 'Zdrowa', null);
-          } catch (e) {
-            console.log('Error inserting plant:', plantId, e.message);
+            stmt.run(plantId, species, zone.id, 'Zdrowa', null);
+            importedCount++;
           }
+        } catch (error) {
+          errors.push(`Row ${index + 1}: ${error.message}`);
         }
       });
     });
 
     transaction();
-    
-    res.json({ 
-      message: 'Pomyślnie zaimportowano dane z pliku CSV',
-      importedRecords: parseResult.data.length
+
+    res.json({
+      success: true,
+      message: `Zaimportowano ${importedCount} roślin`,
+      importedRecords: importedCount,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     console.error('Error importing CSV:', error);
-    res.status(500).json({ error: 'Błąd podczas importu danych z CSV' });
+    res.status(500).json({ error: 'Błąd podczas importu CSV' });
   }
 });
 
 // Serve React app
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist/index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`🌱 PlantManager MVP działa na porcie ${port}`);
-  console.log(`📍 Serwer dostępny pod adresem: http://localhost:${port}`);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
