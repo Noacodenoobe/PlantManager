@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
-
-const queryClient = new QueryClient();
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 type Zone = {
   id: number;
@@ -14,13 +12,14 @@ type Zone = {
 };
 
 export default function AddPlant() {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     id: '',
     species: '',
     status: 'Zdrowa',
     notes: '',
   });
-  
+
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
 
   const { data: zones = [] } = useQuery({
@@ -28,18 +27,24 @@ export default function AddPlant() {
   });
 
   const createPlantMutation = useMutation({
-    mutationFn: async (plantData: any) => {
+    mutationFn: async (plantData: {
+      id: string;
+      species: string;
+      status: string;
+      notes: string;
+      zoneId: number | null;
+    }) => {
       const response = await fetch('/api/plants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plantData),
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json() as { error?: string };
+        const errorData = (await response.json()) as { error?: string };
         throw new Error(errorData.error || 'Błąd podczas dodawania rośliny');
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -52,7 +57,7 @@ export default function AddPlant() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.id || !formData.species) {
       window.alert('ID i gatunek są wymagane!');
       return;
@@ -68,7 +73,9 @@ export default function AddPlant() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -77,12 +84,18 @@ export default function AddPlant() {
     <div style={{ padding: '24px', maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
         <span style={{ fontSize: '24px', fontWeight: '600', marginRight: '8px' }}>➕</span>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>
-          Dodaj nową roślinę
-        </h1>
+        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>Dodaj nową roślinę</h1>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          backgroundColor: 'white',
+          padding: '24px',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
+        }}
+      >
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
             ID Rośliny *
@@ -98,7 +111,7 @@ export default function AddPlant() {
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
-              fontSize: '14px'
+              fontSize: '14px',
             }}
             placeholder="np. P01_R1"
           />
@@ -119,26 +132,24 @@ export default function AddPlant() {
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
-              fontSize: '14px'
+              fontSize: '14px',
             }}
             placeholder="np. Monstera deliciosa"
           />
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-            Strefa
-          </label>
+          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Strefa</label>
           <select
             value={selectedZoneId || ''}
-            onChange={(e) => setSelectedZoneId(e.target.value ? parseInt(e.target.value) : null)}
+            onChange={e => setSelectedZoneId(e.target.value ? parseInt(e.target.value) : null)}
             style={{
               width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
             }}
           >
             <option value="">Wybierz strefę (opcjonalnie)</option>
@@ -151,9 +162,7 @@ export default function AddPlant() {
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>
-            Status
-          </label>
+          <label style={{ display: 'block', marginBottom: '4px', fontWeight: '500' }}>Status</label>
           <select
             name="status"
             value={formData.status}
@@ -164,7 +173,7 @@ export default function AddPlant() {
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              backgroundColor: 'white'
+              backgroundColor: 'white',
             }}
           >
             <option value="Zdrowa">Zdrowa</option>
@@ -189,7 +198,7 @@ export default function AddPlant() {
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
-              resize: 'vertical'
+              resize: 'vertical',
             }}
             placeholder="Dodatkowe informacje o roślinie..."
           />
@@ -208,7 +217,7 @@ export default function AddPlant() {
             fontSize: '16px',
             fontWeight: '500',
             cursor: createPlantMutation.isPending ? 'not-allowed' : 'pointer',
-            opacity: createPlantMutation.isPending ? 0.6 : 1
+            opacity: createPlantMutation.isPending ? 0.6 : 1,
           }}
         >
           {createPlantMutation.isPending ? 'Dodawanie...' : 'Dodaj roślinę'}

@@ -1,7 +1,17 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { eq, like, and, sql } from 'drizzle-orm';
-import { locations, plants, users, type Location, type Plant, type InsertLocation, type InsertPlant, type LocationWithPath, type PlantWithLocation } from '../shared/schema';
+import { eq, and, sql } from 'drizzle-orm';
+import {
+  locations,
+  plants,
+  users,
+  type Location,
+  type Plant,
+  type InsertLocation,
+  type InsertPlant,
+  type LocationWithPath,
+  type PlantWithLocation,
+} from '../shared/schema';
 
 export interface IStorage {
   // Locations
@@ -11,7 +21,7 @@ export interface IStorage {
   getLocationsByLevel(level: number): Promise<Location[]>;
   createLocation(location: InsertLocation): Promise<Location>;
   getLocationHierarchy(): Promise<LocationWithPath[]>;
-  
+
   // Plants
   getAllPlants(): Promise<PlantWithLocation[]>;
   getPlantById(id: string): Promise<PlantWithLocation | undefined>;
@@ -20,13 +30,13 @@ export interface IStorage {
   createPlant(plant: InsertPlant): Promise<Plant>;
   updatePlant(id: string, updates: Partial<InsertPlant>): Promise<Plant>;
   deletePlant(id: string): Promise<boolean>;
-  
+
   // Users
   getUserByEmail(email: string): Promise<typeof users.$inferSelect | undefined>;
   createUser(user: { email: string; passwordHash: string }): Promise<typeof users.$inferSelect>;
-  
+
   // Import
-  importCSVData(csvData: any[]): Promise<void>;
+  importCSVData(csvData: Record<string, string>[]): Promise<void>;
 }
 
 export class SQLiteStorage implements IStorage {
@@ -47,6 +57,12 @@ export class SQLiteStorage implements IStorage {
         name TEXT NOT NULL,
         level INTEGER NOT NULL,
         parent_id INTEGER,
+        full_path TEXT,
+        floor TEXT,
+        main_zone TEXT,
+        sub_zone TEXT,
+        area_type TEXT,
+        specific_location TEXT,
         FOREIGN KEY (parent_id) REFERENCES locations(id) ON DELETE CASCADE
       );
     `);
@@ -74,8 +90,12 @@ export class SQLiteStorage implements IStorage {
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_locations_parent_id ON locations(parent_id);
       CREATE INDEX IF NOT EXISTS idx_locations_level ON locations(level);
+      CREATE INDEX IF NOT EXISTS idx_locations_name ON locations(name);
       CREATE INDEX IF NOT EXISTS idx_plants_location_id ON plants(location_id);
       CREATE INDEX IF NOT EXISTS idx_plants_status ON plants(status);
+      CREATE INDEX IF NOT EXISTS idx_plants_species ON plants(species);
+      CREATE INDEX IF NOT EXISTS idx_plants_id_species ON plants(id, species);
+      CREATE INDEX IF NOT EXISTS idx_plants_status_location ON plants(status, location_id);
     `);
   }
 
@@ -91,7 +111,10 @@ export class SQLiteStorage implements IStorage {
 
   async getLocationsByParentId(parentId: number | null): Promise<Location[]> {
     if (parentId === null) {
-      return this.drizzle.select().from(locations).where(sql`${locations.parentId} IS NULL`);
+      return this.drizzle
+        .select()
+        .from(locations)
+        .where(sql`${locations.parentId} IS NULL`);
     }
     return this.drizzle.select().from(locations).where(eq(locations.parentId, parentId));
   }
@@ -108,29 +131,33 @@ export class SQLiteStorage implements IStorage {
   async getLocationHierarchy(): Promise<LocationWithPath[]> {
     const allLocations = await this.getAllLocations();
     const locationMap = new Map<number, LocationWithPath>();
-    
+
     // Konwertuj wszystkie lokalizacje do LocationWithPath
     allLocations.forEach(location => {
       locationMap.set(location.id, {
         ...location,
-        fullPath: '',
-        children: []
+        fullPath: location.fullPath || location.name, // Użyj zapisanej fullPath lub fallback na name
+        children: [],
       });
     });
 
-    // Buduj hierarchię i pełne ścieżki
+    // Buduj hierarchię - jeśli fullPath nie jest zapisana, buduj ją dynamicznie
     const rootLocations: LocationWithPath[] = [];
-    
+
     allLocations.forEach(location => {
       const locationWithPath = locationMap.get(location.id)!;
-      
+
       if (location.parentId === null) {
-        locationWithPath.fullPath = location.name;
+        if (!location.fullPath) {
+          locationWithPath.fullPath = location.name;
+        }
         rootLocations.push(locationWithPath);
       } else {
         const parent = locationMap.get(location.parentId);
         if (parent) {
-          locationWithPath.fullPath = `${parent.fullPath} > ${location.name}`;
+          if (!location.fullPath) {
+            locationWithPath.fullPath = `${parent.fullPath} > ${location.name}`;
+          }
           parent.children!.push(locationWithPath);
         }
       }
@@ -159,13 +186,15 @@ export class SQLiteStorage implements IStorage {
       locationId: row.locationId,
       status: row.status,
       notes: row.notes,
-      location: row.locationName ? {
-        id: row.locationId!,
-        name: row.locationName,
-        level: 0,
-        parentId: null,
-        fullPath: row.locationName
-      } : undefined
+      location: row.locationName
+        ? {
+            id: row.locationId!,
+            name: row.locationName,
+            level: 0,
+            parentId: null,
+            fullPath: row.locationName,
+          }
+        : undefined,
     }));
   }
 
@@ -192,13 +221,15 @@ export class SQLiteStorage implements IStorage {
       locationId: row.locationId,
       status: row.status,
       notes: row.notes,
-      location: row.locationName ? {
-        id: row.locationId!,
-        name: row.locationName,
-        level: 0,
-        parentId: null,
-        fullPath: row.locationName
-      } : undefined
+      location: row.locationName
+        ? {
+            id: row.locationId!,
+            name: row.locationName,
+            level: 0,
+            parentId: null,
+            fullPath: row.locationName,
+          }
+        : undefined,
     };
   }
 
@@ -215,9 +246,7 @@ export class SQLiteStorage implements IStorage {
       })
       .from(plants)
       .leftJoin(locations, eq(plants.locationId, locations.id))
-      .where(
-        sql`${plants.id} LIKE ${searchPattern} OR ${plants.species} LIKE ${searchPattern}`
-      );
+      .where(sql`${plants.id} LIKE ${searchPattern} OR ${plants.species} LIKE ${searchPattern}`);
 
     return result.map(row => ({
       id: row.id,
@@ -225,17 +254,22 @@ export class SQLiteStorage implements IStorage {
       locationId: row.locationId,
       status: row.status,
       notes: row.notes,
-      location: row.locationName ? {
-        id: row.locationId!,
-        name: row.locationName,
-        level: 0,
-        parentId: null,
-        fullPath: row.locationName
-      } : undefined
+      location: row.locationName
+        ? {
+            id: row.locationId!,
+            name: row.locationName,
+            level: 0,
+            parentId: null,
+            fullPath: row.locationName,
+          }
+        : undefined,
     }));
   }
 
-  async filterPlants(filters: { status?: string; locationId?: number }): Promise<PlantWithLocation[]> {
+  async filterPlants(filters: {
+    status?: string;
+    locationId?: number;
+  }): Promise<PlantWithLocation[]> {
     let query = this.drizzle
       .select({
         id: plants.id,
@@ -268,13 +302,15 @@ export class SQLiteStorage implements IStorage {
       locationId: row.locationId,
       status: row.status,
       notes: row.notes,
-      location: row.locationName ? {
-        id: row.locationId!,
-        name: row.locationName,
-        level: 0,
-        parentId: null,
-        fullPath: row.locationName
-      } : undefined
+      location: row.locationName
+        ? {
+            id: row.locationId!,
+            name: row.locationName,
+            level: 0,
+            parentId: null,
+            fullPath: row.locationName,
+          }
+        : undefined,
     }));
   }
 
@@ -284,7 +320,11 @@ export class SQLiteStorage implements IStorage {
   }
 
   async updatePlant(id: string, updates: Partial<InsertPlant>): Promise<Plant> {
-    const result = await this.drizzle.update(plants).set(updates).where(eq(plants.id, id)).returning();
+    const result = await this.drizzle
+      .update(plants)
+      .set(updates)
+      .where(eq(plants.id, id))
+      .returning();
     return result[0];
   }
 
@@ -299,13 +339,16 @@ export class SQLiteStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(user: { email: string; passwordHash: string }): Promise<typeof users.$inferSelect> {
+  async createUser(user: {
+    email: string;
+    passwordHash: string;
+  }): Promise<typeof users.$inferSelect> {
     const result = await this.drizzle.insert(users).values(user).returning();
     return result[0];
   }
 
   // Import CSV data
-  async importCSVData(csvData: any[]): Promise<void> {
+  async importCSVData(csvData: Record<string, string>[]): Promise<void> {
     const transaction = this.db.transaction(() => {
       // Mapa do śledzenia utworzonych lokalizacji
       const locationCache = new Map<string, number>();
@@ -317,7 +360,7 @@ export class SQLiteStorage implements IStorage {
           { name: row.Strefa_glowna, level: 2 },
           { name: row.Lokalizacja_szczegolowa, level: 3 },
           { name: row.Rodzaj_donicy, level: 4 },
-          { name: row.Lokalizacja_precyzyjna, level: 5 }
+          { name: row.Lokalizacja_precyzyjna, level: 5 },
         ].filter(loc => loc.name && loc.name.trim() !== ''); // Filtruj puste wartości
 
         let parentId: number | null = null;
@@ -325,33 +368,64 @@ export class SQLiteStorage implements IStorage {
 
         // Twórz hierarchię lokalizacji
         locationLevels.forEach((levelData, index) => {
-          const pathKey = locationLevels.slice(0, index + 1).map(l => l.name).join(' > ');
-          
+          const pathKey = locationLevels
+            .slice(0, index + 1)
+            .map(l => l.name)
+            .join(' > ');
+
           if (!locationCache.has(pathKey)) {
-            const newLocation = this.drizzle.insert(locations).values({
-              name: levelData.name,
-              level: levelData.level,
-              parentId: parentId
-            }).returning().get();
-            
+            const newLocation = this.drizzle
+              .insert(locations)
+              .values({
+                name: levelData.name,
+                level: levelData.level,
+                parentId: parentId,
+                fullPath: pathKey,
+                floor:
+                  levelData.level === 1
+                    ? levelData.name
+                    : locationLevels.find(l => l.level === 1)?.name || null,
+                mainZone:
+                  levelData.level === 2
+                    ? levelData.name
+                    : locationLevels.find(l => l.level === 2)?.name || null,
+                subZone:
+                  levelData.level === 3
+                    ? levelData.name
+                    : locationLevels.find(l => l.level === 3)?.name || null,
+                areaType:
+                  levelData.level === 4
+                    ? levelData.name
+                    : locationLevels.find(l => l.level === 4)?.name || null,
+                specificLocation:
+                  levelData.level === 5
+                    ? levelData.name
+                    : locationLevels.find(l => l.level === 5)?.name || null,
+              })
+              .returning()
+              .get();
+
             locationCache.set(pathKey, newLocation.id);
             currentLocationId = newLocation.id;
           } else {
             currentLocationId = locationCache.get(pathKey)!;
           }
-          
+
           parentId = currentLocationId;
         });
 
         // Dodaj roślinę
         if (row.ID_Rosliny && row.Roslina) {
-          this.drizzle.insert(plants).values({
-            id: row.ID_Rosliny,
-            species: row.Roslina,
-            locationId: currentLocationId,
-            status: 'Zdrowa',
-            notes: null
-          }).run();
+          this.drizzle
+            .insert(plants)
+            .values({
+              id: row.ID_Rosliny,
+              species: row.Roslina,
+              locationId: currentLocationId,
+              status: 'Zdrowa',
+              notes: null,
+            })
+            .run();
         }
       });
     });

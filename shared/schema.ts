@@ -9,6 +9,12 @@ export const locations = sqliteTable('locations', {
   name: text('name').notNull(),
   level: integer('level').notNull(), // 1: Piętro, 2: Strefa główna, 3: Lokalizacja szczegółowa, 4: Rodzaj donicy, 5: Lokalizacja precyzyjna
   parentId: integer('parent_id').references(() => locations.id, { onDelete: 'cascade' }),
+  fullPath: text('full_path'), // Pełna ścieżka hierarchii
+  floor: text('floor'), // Piętro (dla kompatybilności z systemem stref)
+  mainZone: text('main_zone'), // Strefa główna
+  subZone: text('sub_zone'), // Podstrefa
+  areaType: text('area_type'), // Typ obszaru
+  specificLocation: text('specific_location'), // Precyzyjna lokalizacja
 });
 
 // Tabela roślin

@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
-
-const queryClient = new QueryClient();
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 type Plant = {
   id: string;
@@ -14,16 +12,12 @@ type Plant = {
   };
 };
 
-const statusClasses: {[key: string]: string} = {
-  'Zdrowa': 'status-healthy',
-  'Do obserwacji': 'status-warning',
-  'W trakcie leczenia': 'status-treatment',
-  'Do usunięcia': 'status-danger',
-};
+// Removed unused statusClasses - now using inline styles
 
 type ViewMode = 'table' | 'cards' | 'grouped';
 
 export default function PlantsList() {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [zoneFilter, setZoneFilter] = useState('');
@@ -35,7 +29,7 @@ export default function PlantsList() {
 
   // Build query parameters for hierarchical filtering
   const queryParams = useMemo(() => {
-    const params: any = {};
+    const params: Record<string, string> = {};
     if (searchQuery) params.search = searchQuery;
     if (statusFilter) params.status = statusFilter;
     if (zoneFilter) params.zoneId = zoneFilter;
@@ -67,15 +61,16 @@ export default function PlantsList() {
 
   // Filter and sort plants
   const filteredPlants = useMemo(() => {
-    let filtered = (plants as Plant[]).filter(plant => {
-      const matchesSearch = !searchQuery || 
+    const filtered = (plants as Plant[]).filter(plant => {
+      const matchesSearch =
+        !searchQuery ||
         plant.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         plant.species.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const matchesStatus = !statusFilter || plant.status === statusFilter;
-      
+
       const matchesZone = !zoneFilter || plant.zone?.id === parseInt(zoneFilter);
-      
+
       return matchesSearch && matchesStatus && matchesZone;
     });
 
@@ -98,13 +93,26 @@ export default function PlantsList() {
     return filtered;
   }, [plants, searchQuery, statusFilter, zoneFilter, sortBy]);
 
+  // Group plants by zone for grouped view
+  const groupedPlants = useMemo(() => {
+    const groups: { [key: string]: Plant[] } = {};
+    filteredPlants.forEach(plant => {
+      const zoneName = plant.zone ? plant.zone.fullPath : 'Brak strefy';
+      if (!groups[zoneName]) {
+        groups[zoneName] = [];
+      }
+      groups[zoneName].push(plant);
+    });
+    return groups;
+  }, [filteredPlants]);
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/plants/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
-        const errorData = await response.json() as { error?: string };
+        const errorData = (await response.json()) as { error?: string };
         throw new Error(errorData.error || 'Błąd podczas usuwania rośliny');
       }
     },
@@ -169,7 +177,7 @@ export default function PlantsList() {
           </tr>
         </thead>
         <tbody>
-          {filteredPlants.map((plant) => (
+          {filteredPlants.map(plant => (
             <tr key={plant.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
               <td style={{ padding: '12px' }}>{plant.id}</td>
               <td style={{ padding: '12px' }}>{plant.species}</td>
@@ -177,9 +185,7 @@ export default function PlantsList() {
                 {plant.zone ? plant.zone.fullPath : 'Brak strefy'}
               </td>
               <td style={{ padding: '12px' }}>
-                <span style={getStatusBadgeStyle(plant.status)}>
-                  {plant.status}
-                </span>
+                <span style={getStatusBadgeStyle(plant.status)}>{plant.status}</span>
               </td>
               <td style={{ padding: '12px' }}>
                 <button
@@ -191,7 +197,7 @@ export default function PlantsList() {
                     padding: '6px 12px',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    marginRight: '8px'
+                    marginRight: '8px',
                   }}
                 >
                   🗑️ Usuń
@@ -205,18 +211,31 @@ export default function PlantsList() {
   );
 
   const renderCardsView = () => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
-      {filteredPlants.map((plant) => (
-        <div key={plant.id} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', backgroundColor: 'white' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: '20px',
+        marginTop: '20px',
+      }}
+    >
+      {filteredPlants.map(plant => (
+        <div
+          key={plant.id}
+          style={{
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            padding: '16px',
+            backgroundColor: 'white',
+          }}
+        >
           <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600' }}>{plant.id}</h3>
           <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>{plant.species}</p>
           <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>
             <strong>Strefa:</strong> {plant.zone ? plant.zone.fullPath : 'Brak strefy'}
           </p>
           <div style={{ marginBottom: '8px' }}>
-            <span style={getStatusBadgeStyle(plant.status)}>
-              {plant.status}
-            </span>
+            <span style={getStatusBadgeStyle(plant.status)}>{plant.status}</span>
           </div>
           {plant.notes && (
             <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#6b7280' }}>
@@ -231,7 +250,7 @@ export default function PlantsList() {
               border: 'none',
               padding: '6px 12px',
               borderRadius: '6px',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             🗑️ Usuń
@@ -242,33 +261,44 @@ export default function PlantsList() {
   );
 
   const renderGroupedView = () => {
-    const groupedPlants = useMemo(() => {
-      const groups: { [key: string]: Plant[] } = {};
-      filteredPlants.forEach(plant => {
-        const zoneName = plant.zone ? plant.zone.fullPath : 'Brak strefy';
-        if (!groups[zoneName]) {
-          groups[zoneName] = [];
-        }
-        groups[zoneName].push(plant);
-      });
-      return groups;
-    }, [filteredPlants]);
-
     return (
       <div style={{ marginTop: '20px' }}>
         {Object.entries(groupedPlants).map(([zoneName, zonePlants]) => (
           <div key={zoneName} style={{ marginBottom: '24px' }}>
-            <h3 style={{ margin: '0 0 12px 0', padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+            <h3
+              style={{
+                margin: '0 0 12px 0',
+                padding: '12px',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '6px',
+              }}
+            >
               {zoneName} ({zonePlants.length} roślin)
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
-              {zonePlants.map((plant) => (
-                <div key={plant.id} style={{ border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px', backgroundColor: 'white' }}>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>{plant.id}</h4>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#6b7280' }}>{plant.species}</p>
-                  <span style={getStatusBadgeStyle(plant.status)}>
-                    {plant.status}
-                  </span>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '12px',
+              }}
+            >
+              {zonePlants.map(plant => (
+                <div
+                  key={plant.id}
+                  style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', fontWeight: '600' }}>
+                    {plant.id}
+                  </h4>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#6b7280' }}>
+                    {plant.species}
+                  </p>
+                  <span style={getStatusBadgeStyle(plant.status)}>{plant.status}</span>
                 </div>
               ))}
             </div>
@@ -288,28 +318,36 @@ export default function PlantsList() {
       </div>
 
       {/* Enhanced Controls */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
         <input
           type="text"
           placeholder="Szukaj według ID lub gatunku..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={e => setSearchQuery(e.target.value)}
           style={{
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            minWidth: '200px'
+            minWidth: '200px',
           }}
         />
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={e => setStatusFilter(e.target.value)}
           style={{
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="">Wszystkie statusy</option>
@@ -322,7 +360,7 @@ export default function PlantsList() {
         {/* Hierarchical Filters */}
         <select
           value={floorFilter}
-          onChange={(e) => {
+          onChange={e => {
             setFloorFilter(e.target.value);
             setMainZoneFilter('');
             setSubZoneFilter('');
@@ -331,11 +369,11 @@ export default function PlantsList() {
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="">Wszystkie piętra</option>
-          {(floors as string[]).map((floor) => (
+          {(floors as string[]).map(floor => (
             <option key={floor} value={floor}>
               {floor}
             </option>
@@ -344,7 +382,7 @@ export default function PlantsList() {
 
         <select
           value={mainZoneFilter}
-          onChange={(e) => {
+          onChange={e => {
             setMainZoneFilter(e.target.value);
             setSubZoneFilter('');
           }}
@@ -352,11 +390,11 @@ export default function PlantsList() {
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="">Wszystkie strefy główne</option>
-          {(mainZones as string[]).map((zone) => (
+          {(mainZones as string[]).map(zone => (
             <option key={zone} value={zone}>
               {zone}
             </option>
@@ -365,16 +403,16 @@ export default function PlantsList() {
 
         <select
           value={subZoneFilter}
-          onChange={(e) => setSubZoneFilter(e.target.value)}
+          onChange={e => setSubZoneFilter(e.target.value)}
           style={{
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="">Wszystkie podstrefy</option>
-          {(subZones as string[]).map((zone) => (
+          {(subZones as string[]).map(zone => (
             <option key={zone} value={zone}>
               {zone}
             </option>
@@ -383,16 +421,16 @@ export default function PlantsList() {
 
         <select
           value={zoneFilter}
-          onChange={(e) => setZoneFilter(e.target.value)}
+          onChange={e => setZoneFilter(e.target.value)}
           style={{
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="">Wszystkie strefy</option>
-          {(zones as any[]).map((zone: any) => (
+          {(zones as Array<{ id: number; full_path: string }>).map(zone => (
             <option key={zone.id} value={zone.id}>
               {zone.full_path}
             </option>
@@ -401,12 +439,12 @@ export default function PlantsList() {
 
         <select
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
+          onChange={e => setSortBy(e.target.value)}
           style={{
             padding: '8px 12px',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
           }}
         >
           <option value="id">ID (A-Z)</option>
@@ -424,7 +462,7 @@ export default function PlantsList() {
             borderRadius: '6px',
             backgroundColor: '#f3f4f6',
             color: '#374151',
-            cursor: 'pointer'
+            cursor: 'pointer',
           }}
         >
           🗑️ Wyczyść filtry
@@ -440,7 +478,7 @@ export default function PlantsList() {
               borderRadius: '6px',
               backgroundColor: viewMode === 'table' ? '#3b82f6' : 'white',
               color: viewMode === 'table' ? 'white' : '#374151',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             📊
@@ -453,7 +491,7 @@ export default function PlantsList() {
               borderRadius: '6px',
               backgroundColor: viewMode === 'cards' ? '#8b5cf6' : 'white',
               color: viewMode === 'cards' ? 'white' : '#374151',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             🃏
@@ -466,7 +504,7 @@ export default function PlantsList() {
               borderRadius: '6px',
               backgroundColor: viewMode === 'grouped' ? '#f59e0b' : 'white',
               color: viewMode === 'grouped' ? 'white' : '#374151',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             📁

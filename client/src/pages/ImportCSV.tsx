@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react';
-import { useMutation, QueryClient } from '@tanstack/react-query';
-
-const queryClient = new QueryClient();
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function ImportCSV() {
+  const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [importResult, setImportResult] = useState<{
@@ -11,27 +10,29 @@ export default function ImportCSV() {
     message: string;
     importedRecords?: number;
   } | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const importMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('csvFile', file);
-      
+
       const response = await fetch('/api/import-csv', {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Nieznany błąd' })) as { error?: string };
+        const errorData = (await response.json().catch(() => ({ error: 'Nieznany błąd' }))) as {
+          error?: string;
+        };
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-      
+
       return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { message: string; importedRecords: number }) => {
       setImportResult({
         success: true,
         message: data.message,
@@ -41,7 +42,7 @@ export default function ImportCSV() {
       queryClient.invalidateQueries({ queryKey: ['/api/plants'] });
       queryClient.invalidateQueries({ queryKey: ['/api/locations'] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       setImportResult({
         success: false,
         message: error.message || 'Wystąpił błąd podczas importu',
@@ -52,9 +53,9 @@ export default function ImportCSV() {
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
+    if (e.type === 'dragenter' || e.type === 'dragover') {
       setDragActive(true);
-    } else if (e.type === "dragleave") {
+    } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
   };
@@ -63,7 +64,7 @@ export default function ImportCSV() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const files = (e.dataTransfer as DataTransfer).files;
     if (files && files[0]) {
       handleFile(files[0]);
@@ -82,7 +83,7 @@ export default function ImportCSV() {
       window.alert('Proszę wybrać plik CSV');
       return;
     }
-    
+
     setSelectedFile(file);
     setImportResult(null);
   };
@@ -111,7 +112,10 @@ export default function ImportCSV() {
             <ul style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.5' }}>
               <li>Plik musi zawierać nagłówki kolumn</li>
               <li>Wymagane kolumny: ID_Rosliny, Roslina</li>
-              <li>Kolumny lokalizacji: Pietro, Strefa_glowna, Lokalizacja_szczegolowa, Rodzaj_donicy, Lokalizacja_precyzyjna</li>
+              <li>
+                Kolumny lokalizacji: Pietro, Strefa_glowna, Lokalizacja_szczegolowa, Rodzaj_donicy,
+                Lokalizacja_precyzyjna
+              </li>
               <li>Kodowanie UTF-8</li>
               <li>Separator: przecinek (,)</li>
             </ul>
@@ -141,22 +145,19 @@ export default function ImportCSV() {
             onChange={handleFileSelect}
             style={{ display: 'none' }}
           />
-          
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-            📁
-          </div>
-          
+
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
+
           <h3 style={{ marginBottom: '8px' }}>
             {selectedFile ? selectedFile.name : 'Przeciągnij plik CSV lub kliknij, aby wybrać'}
           </h3>
-          
+
           <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-            {selectedFile 
+            {selectedFile
               ? `Wybrany plik: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)} KB)`
-              : 'Obsługiwane formaty: CSV'
-            }
+              : 'Obsługiwane formaty: CSV'}
           </p>
-          
+
           <button
             onClick={handleClick}
             style={{

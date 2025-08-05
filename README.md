@@ -7,6 +7,7 @@
 PlantManager MVP to aplikacja webowa przeznaczona do zarządzania roślinami w środowisku biurowym. Aplikacja wyróżnia się innowacyjnym systemem stref, który lepiej odzwierciedla rzeczywistą strukturę organizacyjną biura niż tradycyjna hierarchia lokalizacji.
 
 ### 🎯 Główne cele aplikacji:
+
 - **Zarządzanie roślinami** - dodawanie, edycja, usuwanie i monitorowanie stanu roślin
 - **System stref** - organizacja roślin według logicznych stref biurowych
 - **Import danych** - masowe dodawanie roślin z plików CSV
@@ -15,28 +16,33 @@ PlantManager MVP to aplikacja webowa przeznaczona do zarządzania roślinami w �
 ## 🚀 Szybkie uruchomienie
 
 ### Wymagania systemowe:
+
 - Node.js (wersja 18 lub nowsza)
 - npm lub yarn
 
 ### Instalacja i uruchomienie:
 
 1. **Sklonuj repozytorium:**
+
    ```bash
    git clone https://github.com/[twoja-nazwa-uzytkownika]/PlantManager.git
    cd PlantManager
    ```
 
 2. **Zainstaluj zależności:**
+
    ```bash
    npm install
    ```
 
 3. **Zbuduj aplikację:**
+
    ```bash
    npm run build
    ```
 
 4. **Uruchom serwer:**
+
    ```bash
    npm start
    ```
@@ -54,11 +60,27 @@ Dla rozwoju aplikacji zalecamy uruchomienie w trybie deweloperskim:
 # Terminal 1 - Frontend (Vite dev server)
 npm run dev
 
-# Terminal 2 - Backend (Node.js server)
+# Terminal 2 - Backend (TypeScript server z hot-reload)
 npm run dev:server
 ```
 
 Frontend będzie dostępny pod `http://localhost:5173` z automatycznym proxy do backendu na porcie 3000.
+
+### 🛠️ Nowe narzędzia developerskie:
+
+```bash
+# Sprawdź kod pod kątem błędów
+npm run lint
+
+# Automatyczne naprawianie problemów ESLint
+npm run lint:fix
+
+# Formatowanie kodu
+npm run format
+
+# Sprawdź formatowanie bez zmian
+npm run format:check
+```
 
 ## ✨ Funkcjonalności
 
@@ -91,6 +113,7 @@ Każda strefa ma pełną ścieżkę, np.: "Piętro 1 > Biuro główne > Sala kon
 ### 📁 Import danych
 
 Aplikacja obsługuje import z plików CSV z kolumnami:
+
 - `ID_Rosliny` - unikalny identyfikator rośliny
 - `Roslina` - nazwa gatunku
 - `Pietro` - numer piętra
@@ -102,12 +125,14 @@ Aplikacja obsługuje import z plików CSV z kolumnami:
 ## 🛠️ Architektura techniczna
 
 ### Backend (Node.js + Express)
+
 - **Serwer**: Express.js z TypeScript
 - **Baza danych**: SQLite z automatycznym tworzeniem schematu
 - **API**: RESTful API z obsługą CORS
 - **Upload**: Multer do obsługi plików CSV
 
 ### Frontend (React + TypeScript)
+
 - **Framework**: React 18 z TypeScript
 - **Build tool**: Vite
 - **Styling**: Tailwind CSS
@@ -115,6 +140,7 @@ Aplikacja obsługuje import z plików CSV z kolumnami:
 - **Routing**: Wouter (lekkie rozwiązanie)
 
 ### Struktura projektu:
+
 ```
 PlantManager/
 ├── client/          # Frontend React
@@ -127,6 +153,7 @@ PlantManager/
 ## 🔧 Rozwiązywanie problemów
 
 ### Problem: Port 3000 zajęty
+
 ```bash
 # Znajdź proces używający portu 3000
 netstat -ano | findstr :3000
@@ -136,22 +163,49 @@ taskkill /PID [PID] /F
 ```
 
 ### Problem: Błąd "require is not defined"
+
 - Upewnij się, że aplikacja została zbudowana: `npm run build`
 - Sprawdź, czy wszystkie importy używają składni ES modules
 
 ### Problem: Baza danych nie aktualizuje się
+
 - Zatrzymaj serwer: `taskkill /PID [PID] /F`
 - Usuń starą bazę: `del database.db`
 - Uruchom serwer ponownie: `npm start`
 
 ### Problem: Import CSV nie działa
+
 - Sprawdź format pliku CSV (użyj przykładowego pliku `przykładowe_dane.csv`)
 - Upewnij się, że kolumny mają poprawne nazwy
 - Sprawdź, czy plik nie jest uszkodzony
 
 ## 📝 Najnowsze zmiany
 
-### ✅ Naprawione problemy:
+### ✅ Naprawione problemy (08.01.2025):
+
+1. **🚨 KRYTYCZNE NAPRAWY:**
+   - **Usunięto duplikację serwerów** - pozostawiono tylko TypeScript implementation
+   - **Naprawiono konflikty TypeScript** - zaktualizowano @types/react do v19.0.0
+   - **Zunifikowano schematy bazy danych** - dodano nowe pola dla kompatybilności
+   - **Naprawiono duplikację QueryClient** - używany jest globalny hook useQueryClient
+
+2. **🛡️ ERROR HANDLING:**
+   - **Dodano ErrorBoundary** - obsługa błędów React z friendly UI
+   - **Ulepszono obsługę błędów React Query** - lepsze retry logic i error messages
+   - **Dodano logowanie błędów** - dla lepszego debugowania
+
+3. **⚡ PERFORMANCE:**
+   - **Dodano indeksy bazy danych** - dla często używanych zapytań
+   - **Optymalizacja retry logic** - nie retry dla 4xx errors
+   - **Lepsze cache management** - ustawienia staleTime i cacheTime
+
+4. **🔧 DEVELOPER EXPERIENCE:**
+   - **Dodano ESLint i Prettier** - spójne formatowanie kodu
+   - **Zaktualizowano .gitignore** - kompletna lista ignorowanych plików
+   - **Nowe npm scripts** - lint, format, dev:server
+   - **Lepsze TypeScript support** - dodano tsx dla development
+
+### ✅ Poprzednie ulepszenia:
 
 1. **🔍 System stref** - zastąpiono hierarchię lokalizacji systemem stref
 2. **🔽 Filtrowanie** - teraz działa poprawnie według statusu i strefy
@@ -179,6 +233,7 @@ taskkill /PID [PID] /F
 6. **Utwórz Pull Request**
 
 ### Standardy kodu:
+
 - Używaj TypeScript dla wszystkich nowych plików
 - Dodawaj komentarze w języku angielskim
 - Testuj funkcjonalności przed commit

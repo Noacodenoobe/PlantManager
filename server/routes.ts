@@ -13,19 +13,19 @@ export function createRoutes(storage: IStorage) {
   router.get('/plants', async (req, res) => {
     try {
       const { search, status, locationId } = req.query;
-      
+
       let plants;
       if (search) {
         plants = await storage.searchPlants(search as string);
       } else if (status || locationId) {
         plants = await storage.filterPlants({
           status: status as string,
-          locationId: locationId ? parseInt(locationId as string) : undefined
+          locationId: locationId ? parseInt(locationId as string) : undefined,
         });
       } else {
         plants = await storage.getAllPlants();
       }
-      
+
       res.json(plants);
     } catch (error) {
       console.error('Error fetching plants:', error);
@@ -64,12 +64,12 @@ export function createRoutes(storage: IStorage) {
     try {
       const validatedData = updatePlantSchema.parse({ ...req.body, id: req.params.id });
       const { id, ...updates } = validatedData;
-      
+
       const updatedPlant = await storage.updatePlant(id, updates);
       if (!updatedPlant) {
         return res.status(404).json({ error: 'Roślina nie została znaleziona' });
       }
-      
+
       res.json(updatedPlant);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -97,7 +97,7 @@ export function createRoutes(storage: IStorage) {
   router.get('/locations', async (req, res) => {
     try {
       const { level, parentId } = req.query;
-      
+
       let locations;
       if (level) {
         locations = await storage.getLocationsByLevel(parseInt(level as string));
@@ -107,7 +107,7 @@ export function createRoutes(storage: IStorage) {
       } else {
         locations = await storage.getAllLocations();
       }
-      
+
       res.json(locations);
     } catch (error) {
       console.error('Error fetching locations:', error);
@@ -150,38 +150,38 @@ export function createRoutes(storage: IStorage) {
       const parseResult = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (header) => {
+        transformHeader: header => {
           // Mapowanie nagłówków z polskiego CSV
           const headerMap: { [key: string]: string } = {
             'ID Rośliny': 'ID_Rosliny',
-            'ID_Rośliny': 'ID_Rosliny',
-            'Roślina': 'Roslina',
-            'Piętro': 'Pietro',
+            ID_Rośliny: 'ID_Rosliny',
+            Roślina: 'Roslina',
+            Piętro: 'Pietro',
             'Strefa główna': 'Strefa_glowna',
-            'Strefa_główna': 'Strefa_glowna',
+            Strefa_główna: 'Strefa_glowna',
             'Lokalizacja szczegółowa': 'Lokalizacja_szczegolowa',
-            'Lokalizacja_szczegółowa': 'Lokalizacja_szczegolowa',
+            Lokalizacja_szczegółowa: 'Lokalizacja_szczegolowa',
             'Rodzaj donicy': 'Rodzaj_donicy',
-            'Rodzaj_donicy': 'Rodzaj_donicy',
+            Rodzaj_donicy: 'Rodzaj_donicy',
             'Lokalizacja precyzyjna': 'Lokalizacja_precyzyjna',
-            'Lokalizacja_precyzyjna': 'Lokalizacja_precyzyjna'
+            Lokalizacja_precyzyjna: 'Lokalizacja_precyzyjna',
           };
           return headerMap[header] || header;
-        }
+        },
       });
 
       if (parseResult.errors.length > 0) {
-        return res.status(400).json({ 
-          error: 'Błąd podczas parsowania pliku CSV', 
-          details: parseResult.errors 
+        return res.status(400).json({
+          error: 'Błąd podczas parsowania pliku CSV',
+          details: parseResult.errors,
         });
       }
 
       await storage.importCSVData(parseResult.data);
-      
-      res.json({ 
+
+      res.json({
         message: 'Pomyślnie zaimportowano dane z pliku CSV',
-        importedRecords: parseResult.data.length
+        importedRecords: parseResult.data.length,
       });
     } catch (error) {
       console.error('Error importing CSV:', error);
@@ -194,16 +194,19 @@ export function createRoutes(storage: IStorage) {
     try {
       const allPlants = await storage.getAllPlants();
       const allLocations = await storage.getAllLocations();
-      
-      const statusStats = allPlants.reduce((acc, plant) => {
-        acc[plant.status] = (acc[plant.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
+
+      const statusStats = allPlants.reduce(
+        (acc, plant) => {
+          acc[plant.status] = (acc[plant.status] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
 
       res.json({
         totalPlants: allPlants.length,
         totalLocations: allLocations.length,
-        statusStats
+        statusStats,
       });
     } catch (error) {
       console.error('Error fetching statistics:', error);
