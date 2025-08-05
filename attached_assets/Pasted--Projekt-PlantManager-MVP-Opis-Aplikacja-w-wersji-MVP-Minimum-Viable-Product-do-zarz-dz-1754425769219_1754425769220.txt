@@ -1,0 +1,87 @@
+
+Projekt: PlantManager MVP
+
+
+Opis:
+
+Aplikacja w wersji MVP (Minimum Viable Product) do zarządzania bazą danych roślin w biurze (ok. 3500+ rekordów).1 Celem jest stworzenie prostego, webowego panelu administratora, który zastąpi pracę z plikiem CSV. Aplikacja ma umożliwiać podstawowe operacje na roślinach: przeglądanie, dodawanie, edytowanie i usuwanie, ze szczególnym uwzględnieniem zmiany statusu zdrowotnego rośliny.
+Dane początkowe zostaną załadowane z dostarczonego pliku CSV (rosliny_all_chybaok.csv).1
+
+Cel:
+
+Zbudować backend API z bazą danych (SQLite) do przechowywania informacji o roślinach i ich hierarchicznej lokalizacji.
+Zbudować prosty frontend (React) w formie panelu administratora do wyświetlania, filtrowania i edycji danych o roślinach.
+Stworzyć skrypt do jednorazowego załadowania danych z pliku rosliny_all_chybaok.csv do bazy danych, który poprawnie zinterpretuje złożoną, 5-poziomową strukturę lokalizacji.1
+Zaprojektować interfejs do dodawania i edycji roślin, który w inteligentny sposób (za pomocą kaskadowych pól wyboru) pozwoli na przypisanie rośliny do lokalizacji, eliminując pomyłki.
+Umożliwić łatwą zmianę statusu każdej rośliny (np. 'Zdrowa', 'Do obserwacji', 'W trakcie leczenia').
+
+Stos Technologiczny:
+
+Backend: Node.js z frameworkiem Express.js
+Frontend: React.js (z wykorzystaniem hooków)
+Baza Danych: SQLite (plik database.db w głównym katalogu projektu)
+API: REST API
+
+Schemat Bazy Danych:
+
+Wygeneruj skrypt setupDatabase.js, który przy starcie serwera utworzy poniższe tabele w bazie SQLite, jeśli nie istnieją.
+
+SQL
+
+
+-- Tabela do przechowywania hierarchicznej struktury lokalizacji
+CREATE TABLE IF NOT EXISTS Locations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    level INTEGER NOT NULL, -- Poziom w hierarchii (1: Pietro, 2: Strefa_glowna, etc.)
+    parent_id INTEGER, -- Klucz obcy do samego siebie, tworzący drzewo
+    FOREIGN KEY (parent_id) REFERENCES Locations(id) ON DELETE CASCADE
+);
+
+-- Tabela z roślinami
+CREATE TABLE IF NOT EXISTS Plants (
+    id TEXT PRIMARY KEY, -- Unikalny ID z pliku CSV, np. "P10_R1"
+    species TEXT NOT NULL, -- Gatunek rośliny, np. "Epipremnum"
+    location_id INTEGER, -- Klucz obcy do ostatniego, najniższego poziomu lokalizacji
+    status TEXT NOT NULL DEFAULT 'Zdrowa', -- Status rośliny, np. 'Zdrowa', 'Do obserwacji', 'W trakcie leczenia'
+    notes TEXT, -- Dodatkowe notatki
+    FOREIGN KEY (location_id) REFERENCES Locations(id)
+);
+
+-- Minimalna tabela użytkowników dla panelu admina
+CREATE TABLE IF NOT EXISTS Users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL
+);
+
+
+
+Logika Aplikacji (Kluczowe Wymagania):
+
+
+1. Import Danych z CSV:
+
+Stwórz endpoint API (POST /api/import-csv), który przyjmie plik rosliny_all_chybaok.csv.1
+Skrypt importujący musi inteligentnie przetworzyć płaską strukturę pliku. Dla każdego wiersza, skrypt musi przeanalizować kolumny lokalizacji: Pietro, Strefa_glowna, Lokalizacja_szczegolowa, Rodzaj_donicy, Lokalizacja_precyzyjna.
+Na podstawie tych kolumn, skrypt musi zbudować drzewo lokalizacji w tabeli Locations. Dla każdej unikalnej ścieżki (np. 13 -> Openspace -> Florama 1), skrypt powinien tworzyć odpowiednie rekordy i łączyć je za pomocą parent_id. Puste komórki w CSV powinny być ignorowane.
+Na końcu, skrypt musi wstawić dane rośliny do tabeli Plants, łącząc ją z location_id odpowiadającym najgłębszemu poziomowi jej lokalizacji.
+
+2. Interfejs Użytkownika (Frontend):
+
+Główny widok: Stwórz tabelę wyświetlającą wszystkie rośliny. Tabela musi mieć funkcję wyszukiwania (po ID, gatunku) oraz filtrowania (po piętrze, strefie, statusie).
+Formularz dodawania/edycji rośliny:
+Pola tekstowe na ID_Rosliny, Roslina (gatunek) i notes.
+Pole wyboru (dropdown) dla status z opcjami: 'Zdrowa', 'Do obserwacji', 'W trakcie leczenia', 'Do usunięcia'.
+Kluczowa funkcjonalność - Kaskadowe Pola Wyboru Lokalizacji: Zamiast pól tekstowych, zaimplementuj 5 zależnych od siebie pól wyboru (dropdown):
+Pierwsze pole pozwala wybrać Piętro.
+Po wybraniu piętra, drugie pole dynamicznie wypełnia się tylko Strefami_glownymi dostępnymi na tym piętrze.
+Proces jest kontynuowany dla kolejnych poziomów (Lokalizacja_szczegolowa, itd.).
+Dane do tych pól wyboru muszą być pobierane z hierarchicznej struktury w tabeli Locations.
+Operacje CRUD: Tabela główna musi umożliwiać edycję i usuwanie każdej rośliny. Musi też istnieć przycisk "Dodaj nową roślinę", który otwiera opisany wyżej formularz.
+
+Struktura Projektu i Pliki:
+
+Wygeneruj kompletną strukturę folderów i plików dla projektu (backend i frontend). Utwórz plik README.md z prostymi instrukcjami, jak zainstalować zależności (npm install), uruchomić serwer backendowy, aplikację frontendową oraz jak wykonać jednorazowy import danych z pliku CSV.
+Cytowane prace
+rosliny_all_chybaok.csv
